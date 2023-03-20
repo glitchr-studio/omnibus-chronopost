@@ -1,0 +1,29 @@
+{
+  "name": "omnibus/chronopost",
+  "description": "",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Marco Meyer",
+      "email": "marco.meyer@glitchr.io",
+      "homepage": "http://glitchr.io/"
+    }
+  ],
+  "require": {
+    "php": ">=7.4"
+  },
+  "require-dev": {
+  },
+  "suggest": {
+  },
+  "autoload": {
+    "psr-4": {
+      "Omnibus\\Chronopost\\": ""
+    }
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-master": "1.0-dev"
+    }
+  }
+}
