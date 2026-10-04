@@ -58,6 +58,61 @@ final class ChronopostGatewayTest extends TestCase
         self::assertStringContainsString('<mode>PDF</mode>', $this->calls[0][1]);
     }
 
+    private function chilled(array $options, ?string $service = null, ?string $pickupPoint = null): \Omnibus\Model\Shipment
+    {
+        $s = Fixtures::shipment();
+
+        return new \Omnibus\Model\Shipment($s->sender, $s->recipient, $s->parcels, $service, $pickupPoint, 'NT-0042', $options, new \DateTimeImmutable('2026-10-06 10:00'));
+    }
+
+    public function testAChronofreshParcelTravelsWithItsUseByDate(): void
+    {
+        $label = $this->gateway()->ship($this->chilled(['product' => 'fresh', 'use_by' => new \DateTimeImmutable('2026-10-11')]));
+
+        self::assertSame('XY123456789FR', $label->trackingNumber);
+        self::assertStringContainsString('<productCode>2R</productCode>', $this->calls[0][1]);
+        self::assertStringContainsString('<service>0</service>', $this->calls[0][1]);
+        self::assertStringContainsString('<scheduledValue><expirationDate>2026-10-11</expirationDate><sellByDate>2026-10-11</sellByDate></scheduledValue>', $this->calls[0][1]);
+        self::assertStringContainsString('<shipDate>2026-10-06T10:00:00</shipDate>', $this->calls[0][1]);
+    }
+
+    public function testTheRangesAndTheirRelays(): void
+    {
+        $gateway = $this->gateway();
+        $gateway->ship($this->chilled(['product' => 'fresh', 'use_by' => '2026-10-12', 'sell_by' => '2026-10-10', 'saturday' => true], null, 'P12345'));
+        self::assertStringContainsString('<productCode>6S</productCode>', $this->calls[0][1]);
+        self::assertStringContainsString('<expirationDate>2026-10-12</expirationDate><sellByDate>2026-10-10</sellByDate>', $this->calls[0][1]);
+        self::assertStringContainsString('<service>6</service>', $this->calls[0][1]);
+
+        $gateway->ship($this->chilled(['product' => 'freeze', 'use_by' => '2027-01-01']));
+        self::assertStringContainsString('<productCode>2S</productCode>', $this->calls[1][1]);
+        $gateway->ship($this->chilled(['product' => 'ambient']));
+        self::assertStringContainsString('<productCode>5M</productCode>', $this->calls[2][1]);
+        self::assertStringNotContainsString('scheduledValue', $this->calls[2][1], 'dry food carries no use-by date unless given one');
+        $gateway->ship($this->chilled(['product' => 'fresh', 'use_by' => '2026-10-12'], '01'));
+        self::assertStringContainsString('<productCode>01</productCode>', $this->calls[3][1], 'a service named wins over the range');
+    }
+
+    /** @dataProvider refusedChilledParcels */
+    public function testAChilledParcelRefusedBeforeAnyCall(array $options, ?string $pickupPoint, string $message): void
+    {
+        try {
+            $this->gateway()->ship($this->chilled($options, null, $pickupPoint));
+            self::fail('shipped');
+        } catch (CarrierException $e) {
+            self::assertStringContainsString($message, $e->getMessage());
+            self::assertSame([], $this->calls, 'Chronopost was not asked');
+        }
+    }
+
+    public static function refusedChilledParcels(): iterable
+    {
+        yield 'no use-by date' => [['product' => 'fresh'], null, 'needs its use-by date'];
+        yield 'a use-by date that does not outlast the shipping day' => [['product' => 'fresh', 'use_by' => '2026-10-06'], null, 'does not outlast'];
+        yield 'frozen to a relay' => [['product' => 'freeze', 'use_by' => '2027-01-01'], 'P12345', 'does not go to a relay'];
+        yield 'an unknown range' => [['product' => 'tepid'], null, 'Unknown Chronopost product'];
+    }
+
     public function testTrackingRelaysAndCancel(): void
     {
         $gateway = $this->gateway();
