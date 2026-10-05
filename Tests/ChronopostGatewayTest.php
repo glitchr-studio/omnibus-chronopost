@@ -43,6 +43,7 @@ final class ChronopostGatewayTest extends TestCase
         self::assertTrue($rates[0]->toPickupPoint);
         self::assertFalse($rates[1]->toPickupPoint);
         self::assertStringContainsString('quickcost-cxf', $this->calls[0][0]);
+        // 19869502: Chronopost's published test account (ChronopostGatewayFactory::TEST_ACCOUNT) - a test identifier, not a secret.
         self::assertStringContainsString('<accountNumber>19869502</accountNumber>', $this->calls[0][1]);
         self::assertStringContainsString('<weight>0.80</weight>', $this->calls[0][1]);
     }

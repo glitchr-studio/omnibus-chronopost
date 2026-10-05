@@ -8,7 +8,6 @@ use Omnibus\Chronopost\Action\RatingAction;
 use Omnibus\Chronopost\Action\ShippingAction;
 use Omnibus\Chronopost\Action\TrackingAction;
 use Omnibus\Config;
-use Omnibus\Exception\InvalidConfigException;
 use Omnibus\GatewayFactory;
 use Symfony\Component\HttpClient\HttpClient;
 
@@ -23,6 +22,10 @@ use Symfony\Component\HttpClient\HttpClient;
  */
 final class ChronopostGatewayFactory extends GatewayFactory
 {
+    /**
+     * Chronopost's test account, published in its web services' documentation,
+     * the same for everyone: test identifiers, not a secret.
+     */
     public const TEST_ACCOUNT = '19869502';
     public const TEST_PASSWORD = '255562';
 
@@ -34,7 +37,7 @@ final class ChronopostGatewayFactory extends GatewayFactory
             'omnibus.required_options' => ['account_number', 'password'],
             'sub_account' => null,
             'omnibus.api' => function (Config $c) {
-                $http = $this->http ?? (class_exists(HttpClient::class) ? HttpClient::create() : throw new InvalidConfigException('The "chronopost" gateway needs symfony/http-client.'));
+                $http = $this->http ?? HttpClient::create();
 
                 return new Api($http, (string) $c['account_number'], (string) $c['password'], $c['sub_account'] ?: null);
             },
