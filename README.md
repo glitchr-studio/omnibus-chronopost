@@ -67,4 +67,4 @@ is no sandbox: Chronopost's published test account is 19869502 / 255562
 Built from Chronopost's published web services documentation and tested on recorded answers; not
 yet run against the test account.
 
-License: LGPL-3.0-or-later.
+License: MIT since 2026-10-09; earlier versions remain published under LGPL-3.0-or-later.
